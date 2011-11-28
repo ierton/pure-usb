@@ -8,7 +8,7 @@
 #include <ns16550.h>
 #include <watchdog.h>
 #include <linux/types.h>
-#include <io.h>
+#include <asm/io.h>
 
 #define UART_LCRVAL UART_LCR_8N1		/* 8 data, 1 stop, no parity */
 #define UART_MCRVAL (UART_MCR_DTR | \

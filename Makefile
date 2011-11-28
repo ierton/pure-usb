@@ -16,6 +16,8 @@ OBJDUMP = $(CROSS_COMPILE)objdump
 
 .PHONY: clean all dump
 
+gccincdir := $(shell $(CC) -print-file-name=include)
+
 # -O0          : Disable optimizations
 # -g           : Generate debug info
 # -ffixed-r8   : Don't touch register r8
@@ -27,18 +29,20 @@ CFLAGS = -nostdinc \
 		-ffreestanding \
 		-I./ \
 		-DTEXT_BASE=$(RAM_BASE) \
+		-D__KERNEL__ \
 		-O0 \
 		-g -Wall \
-		-marm -mcpu=arm1176jzf-s
+		-marm -mcpu=arm1176jzf-s \
+		-isystem $(gccincdir)
 
 # Name of target program
-PROG=hello-arm
+PROG=pure-usb
 
 # List of all *c sources
-CSRC=main.c ns16550.c
+CSRC=main.c ns16550.c vsprintf.c console.c string.c ctype.c asm/div0.c asm/hang.c asm/div64.c
 
 #List of all *S (asm) sources
-ASRC=start.S
+ASRC=start.S asm/_udivsi3.S asm/_ashldi3.o asm/_ashrdi3.o asm/_divsi3.o asm/_lshrdi3.o asm/_modsi3.o asm/_udivsi3.o asm/_umodsi3.o
 
 COBJ = $(subst .c,.o,$(CSRC))
 AOBJ = $(subst .S,.o,$(ASRC))
@@ -59,7 +63,7 @@ $(PROG).bin: $(PROG).elf
 
 clean:
 	rm -f *.a
-	rm -f *.o 
+	rm -f *.o  asm/*.o
 	rm -f *.elf
 	rm -f *.v
 	rm -f *.bin
