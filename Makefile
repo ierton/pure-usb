@@ -10,7 +10,6 @@ AS = $(CROSS_COMPILE)as
 CC = $(CROSS_COMPILE)gcc
 LD = $(CROSS_COMPILE)ld
 AR = $(CROSS_COMPILE)ar
-#GDB = $(CROSS_COMPILE)gdb
 OBJCOPY = $(CROSS_COMPILE)objcopy
 OBJDUMP = $(CROSS_COMPILE)objdump 
 
@@ -74,14 +73,5 @@ clean:
 # Show the disassembly
 disassemble: $(PROG).elf
 	$(OBJDUMP) -d $(PROG).elf
-
-# Connect to the remote gdb and start debugging
-debug: $(PROG).bin
-	rm .gdbscript ; \
-	echo 'target remote 10.7.9.19:4000' >> .gdbscript ; \
-	echo 'restore $(PROG).bin binary $(RAM_BASE)' >> .gdbscript ; \
-	echo 'jump *$(RAM_BASE)' >> .gdbscript ; \
-	$(GDB) -x .gdbscript $(PROG).elf ;
-
 
 
