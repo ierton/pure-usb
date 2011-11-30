@@ -4,13 +4,13 @@ CROSS_COMPILE=arm-none-linux-gnueabi-
 endif
 
 # Base address to load the program
-RAM_BASE=0x00100000
+RAM_BASE=0x00100010
 
 AS = $(CROSS_COMPILE)as
 CC = $(CROSS_COMPILE)gcc
 LD = $(CROSS_COMPILE)ld
 AR = $(CROSS_COMPILE)ar
-GDB = $(CROSS_COMPILE)gdb
+#GDB = $(CROSS_COMPILE)gdb
 OBJCOPY = $(CROSS_COMPILE)objcopy
 OBJDUMP = $(CROSS_COMPILE)objdump 
 
@@ -42,7 +42,7 @@ PROG=pure-usb
 CSRC=main.c ns16550.c vsprintf.c console.c string.c ctype.c asm/div0.c asm/hang.c asm/div64.c
 
 #List of all *S (asm) sources
-ASRC=start.S asm/_udivsi3.S asm/_ashldi3.o asm/_ashrdi3.o asm/_divsi3.o asm/_lshrdi3.o asm/_modsi3.o asm/_udivsi3.o asm/_umodsi3.o
+ASRC=start.S asm/_ashldi3.o asm/_ashrdi3.o asm/_divsi3.o asm/_lshrdi3.o asm/_modsi3.o asm/_udivsi3.o asm/_umodsi3.o
 
 COBJ = $(subst .c,.o,$(CSRC))
 AOBJ = $(subst .S,.o,$(ASRC))
@@ -78,7 +78,7 @@ disassemble: $(PROG).elf
 # Connect to the remote gdb and start debugging
 debug: $(PROG).bin
 	rm .gdbscript ; \
-	echo 'target remote 10.7.9.42:4000' >> .gdbscript ; \
+	echo 'target remote 10.7.9.19:4000' >> .gdbscript ; \
 	echo 'restore $(PROG).bin binary $(RAM_BASE)' >> .gdbscript ; \
 	echo 'jump *$(RAM_BASE)' >> .gdbscript ; \
 	$(GDB) -x .gdbscript $(PROG).elf ;
