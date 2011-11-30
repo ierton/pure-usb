@@ -27,6 +27,24 @@
 NS16550_t g_port;
 
 #define SERIAL(x) NS16550_##x
+#define SERIAL_PORT(addr) ((volatile struct NS16550 *)(addr))
+
+void console_init(void)
+{
+	const int MODE_X_DIV = 16;
+
+	/* Compute divisor value. Normally, we should simply return:
+	 *   CONFIG_SYS_NS16550_CLK) / MODE_X_DIV / gd->baudrate
+	 * but we need to round that value by adding 0.5.
+	 * Rounding is especially important at high baud rates.
+	 */
+	const int divisor = 
+		(CONFIG_SYS_NS16550_CLK + (CONFIG_BAUDRATE * (MODE_X_DIV / 2))) /
+		(MODE_X_DIV * CONFIG_BAUDRATE);
+
+	g_port = SERIAL_PORT(CONFIG_SYS_NS16550_COM1);
+	SERIAL(init)(g_port,divisor);
+}
 
 /*
  * This depends on tstc() always being called before getc().
@@ -59,13 +77,16 @@ static int console_tstc()
 
 static void console_putc(const char c)
 {
+	if(c == '\n') {
+		SERIAL(putc)(g_port,'\r');
+	}
 	SERIAL(putc)(g_port,c);
 }
 
 static void console_puts(const char *s)
 {
 	while (*s) {
-		SERIAL(putc)(g_port,*s++);
+		console_putc(*s++);
 	}
 }
 

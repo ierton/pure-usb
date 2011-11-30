@@ -92,6 +92,7 @@ typedef volatile unsigned char	vu_char;
  * Function Prototypes
  */
 
+/* hang.c */
 void hang(void);
 
 /* lib/vsprintf.c */
@@ -117,6 +118,14 @@ int	ctrlc (void);
 int	had_ctrlc (void);	/* have we had a Control-C since last clear? */
 void	clear_ctrlc (void);	/* clear the Control-C condition */
 int	disable_ctrlc (int);	/* 1 to disable, 0 to enable Control-C detect */
+
+/* console.c */
+void console_init(void);
+int printf(const char *fmt, ...);
+int vprintf(const char *fmt, va_list args);
+void puts(const char *s);
+void putc(const char c);
+int getc(void);
 
 #endif /* __ASSEMBLY__ */
 
