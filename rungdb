@@ -1,0 +1,71 @@
+#!/bin/sh
+
+die() { echo $@ >&2 ; exit 1; }
+
+if test -z "${CROSS_COMPILE}" ; then
+	echo "Warning: CROSS_COMPILE is not set. This probably is not what you have expected."
+fi
+
+if test -z "$GDB" ; then
+	GDB=${CROSS_COMPILE}gdb
+fi
+ICEIP=
+
+while test -n "$1" ; do
+	case $1 in
+		-i) ICEIP="$2"; shift ;;
+		-g) GDB="$2"; shift ;;
+		*) die "usage: `basename $0` [-i IP] [-g GDB]" ;;
+	esac
+	shift
+done
+
+test -x `which $GDB` || 
+	die "GDB is not executable ($GDB)"
+
+if test -z "$ICEIP" ; then
+	echo "Select ICEIP"
+	select i in 10.7.9.19 10.7.9.42 other; do
+		case $i in
+			other) echo -n "Enter IP : " ; read ICEIP ;;
+			*) ICEIP=$i ;;
+		esac
+		break;
+	done
+fi
+
+echo ICEIP is $ICEIP
+echo GDB is $GDB
+
+PRG=pure-usb.elf
+PRG_BIN=`basename $PRG .elf`.bin
+test -f $PRG || die "File '$PRG' not found"
+test -f $PRG_BIN || die "File '$PRG.bin' not found"
+echo PRG is $PRG
+
+PRGSIZE=`ls -l $PRG_BIN | awk '{print $5}' | xargs printf '0x%X'`
+echo PRGSIZE is $PRGSIZE
+
+BASE="0x00100010"
+echo BASE is $BASE
+
+cat > .gdb-script <<EOF
+    define con
+		target remote $ICEIP:4000
+    end
+
+    define upload
+		restore $PRG_BIN binary $BASE
+    end
+
+	define goto
+		set \$pc = $BASE
+	end
+
+	con
+	upload
+	goto
+EOF
+
+$GDB -x .gdb-script $PRG
+
