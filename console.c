@@ -52,7 +52,7 @@ void console_init(void)
  * only from fgetc() which assures it.
  * No attempt is made to demultiplex multiple input sources.
  */
-static int console_getc()
+static int console_getc(void)
 {
 	unsigned char ret;
 
@@ -61,7 +61,7 @@ static int console_getc()
 	return ret;
 }
 
-static int console_tstc()
+static int console_tstc(void)
 {
 	int ret;
 

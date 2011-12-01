@@ -192,6 +192,7 @@
 /* Fujitsu USB controller */
 #define CONFIG_USB_EHCI_FUSB20
 #define CONFIG_FUSB20_BASE 0x10040000
+#define CONFIG_SYS_USB_OHCI_REGS_BASE (CONFIG_FUSB20_BASE + 0x8000)
 
 /*
  * Booting

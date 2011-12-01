@@ -36,6 +36,7 @@ typedef volatile unsigned char	vu_char;
 
 #include <config.h>
 #include <stdarg.h>
+#include <string.h>
 #include <linux/types.h>
 #include <ns16550.h>
 
@@ -126,6 +127,10 @@ int vprintf(const char *fmt, va_list args);
 void puts(const char *s);
 void putc(const char c);
 int getc(void);
+
+/* time.c */
+void udelay(unsigned long usec);
+void mdelay(unsigned long msec);
 
 #endif /* __ASSEMBLY__ */
 

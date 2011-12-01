@@ -26,10 +26,14 @@ CFLAGS = -nostdinc \
 		-ffixed-r8 \
 		-msoft-float \
 		-ffreestanding \
+		-mabi=aapcs-linux \
+		-mno-thumb-interwork \
+		-Wstrict-prototypes \
+		-fno-stack-protector \
 		-I./ \
 		-DTEXT_BASE=$(RAM_BASE) \
 		-D__KERNEL__ \
-		-O0 \
+		-Os \
 		-g -Wall \
 		-marm -mcpu=arm1176jzf-s \
 		-isystem $(gccincdir)
@@ -38,7 +42,7 @@ CFLAGS = -nostdinc \
 PROG=pure-usb
 
 # List of all *c sources
-CSRC=main.c ns16550.c vsprintf.c console.c string.c ctype.c asm/div0.c asm/hang.c asm/div64.c
+CSRC=main.c ns16550.c vsprintf.c console.c string.c ctype.c asm/div0.c asm/hang.c asm/div64.c ehci-hcd.c ehci-fusb20.c usb.c ohci-test.c time.c
 
 #List of all *S (asm) sources
 ASRC=start.S asm/_ashldi3.o asm/_ashrdi3.o asm/_divsi3.o asm/_lshrdi3.o asm/_modsi3.o asm/_udivsi3.o asm/_umodsi3.o

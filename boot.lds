@@ -13,8 +13,19 @@ SECTIONS
 		*(.rodata.*)
     }
 
+	. = ALIGN(4);
+	.data : {
+		*(.data)
+	}
+
     .= 0x140000;
     .bss : {
 		*(.bss)
     }
+
+	/DISCARD/ : { *(.dynstr*) }
+	/DISCARD/ : { *(.dynamic*) }
+	/DISCARD/ : { *(.plt*) }
+	/DISCARD/ : { *(.interp*) }
+	/DISCARD/ : { *(.gnu*) }
 }
