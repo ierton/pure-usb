@@ -127,54 +127,6 @@
 #define CONFIG_BAUDRATE           38400
 #define CONFIG_SYS_BAUDRATE_TABLE { 9600, 19200, 38400, 57600, 115200 }
 
-#if 0
-/*
- * Ethernet configuration
- */
-#define CONFIG_GRETH              1
-#define CONFIG_GRETH_BASE         0x20034000
-#define CONFIG_GRETH_IRQ          (-1)
-#define CONFIG_GRETH_PHY_ADDR     0x1f
-#define CONFIG_GRETH_PHY_TIMEOUT_MS   3000
-#define CONFIG_GRETH_SWAP_BD
-#define CONFIG_GRETH_DEBUG
-//#define CONFIG_GRETH_DEBUG_PACKET
-/* General network settings */
-#define CONFIG_NETMASK            255.255.255.0
-#define CONFIG_GATEWAYIP          10.0.0.1
-#define CONFIG_SERVERIP           10.0.0.1
-#define CONFIG_IPADDR             10.0.0.2
-#define CONFIG_ETHADDR            UEMD_MAC
-#define CONFIG_GRETH_SET_HWADDR
-/* Enables new U-Boot networking stack */
-#define CONFIG_NET_MULTI          1
-#define CONFIG_CMD_NET
-#define CONFIG_CMD_PING
-/* Sets the MTU value for tftp. Larger values may 
- * cause greth to hung up. */
-#define CONFIG_TFTP_BLOCKSIZE     600
-#endif
-
-#if 0
-/*
- * MNAND specific defines
- */
-#define CONFIG_SYS_MAX_MTD_DEVICE 1
-#define CONFIG_SYS_MTD_BASE       0x2003f000
-#define CONFIG_MTD_MNAND
-#define CONFIG_CMD_MNAND
-#define CONFIG_CMD_MTD
-#define CONFIG_GENERIC_MTD
-#define CONFIG_MNAND_TIMEOUT_MS   5000
-#if 0
-#define CONFIG_MNAND_DEBUG_HIST
-#define CONFIG_CMD_MNANDCTL
-#define CONFIG_CMD_JFFS2
-#define CONFIG_JFFS2_CMDLINE
-#define CONFIG_JFFS2_NAND
-#define CONFIG_JFFS2_DEV "nand0=mnand"
-#endif
-#endif
 
 #if 0
 /* 
