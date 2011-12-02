@@ -1,8 +1,9 @@
 #include <common.h>
 #include <asm/byteorder.h>
-//#include <usb.h>
+#include <ohci.h>
 
-#define INFO(fmt,args...) printf("%s:%d " fmt "\n", __FUNCTION__, __LINE__,  ##args)
+//#define INFO(fmt,args...) printf("%s:%d " fmt "\n", __FUNCTION__, __LINE__,  ##args)
+#define INFO(fmt,args...)
 
 
 #define CHECK(x, cmd) do { if(!(x)) { INFO("failed condition %s", #x) ; { cmd ; } ; } } while(0)

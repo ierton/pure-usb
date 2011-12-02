@@ -42,6 +42,39 @@
 
 #define USB_CNTL_TIMEOUT 100 /* 100ms timeout */
 
+/*************************************************************************
+ * Hub Stuff
+ */
+struct usb_port_status {
+	unsigned short wPortStatus;
+	unsigned short wPortChange;
+} __attribute__ ((packed));
+
+struct usb_hub_status {
+	unsigned short wHubStatus;
+	unsigned short wHubChange;
+} __attribute__ ((packed));
+
+
+/* Hub descriptor */
+struct usb_hub_descriptor {
+	unsigned char  bLength;
+	unsigned char  bDescriptorType;
+	unsigned char  bNbrPorts;
+	unsigned short wHubCharacteristics;
+	unsigned char  bPwrOn2PwrGood;
+	unsigned char  bHubContrCurrent;
+	unsigned char  DeviceRemovable[(USB_MAXCHILDREN+1+7)/8];
+	unsigned char  PortPowerCtrlMask[(USB_MAXCHILDREN+1+7)/8];
+	/* DeviceRemovable and PortPwrCtrlMask want to be variable-length
+	   bitmaps that hold max 255 entries. (bit0 is ignored) */
+} __attribute__ ((packed));
+
+
+/*************************************************************************
+ * Device staff
+ */
+
 /* device request (setup) */
 struct devrequest {
 	unsigned char	requesttype;
@@ -87,9 +120,9 @@ enum {
 struct usb_device {
 	int	devnum;			/* Device number on USB bus */
 	int	speed;			/* full/low/high */
-	char	mf[32];			/* manufacturer */
-	char	prod[32];		/* product */
-	char	serial[32];		/* serial number */
+	char mf[32];		/* manufacturer */
+	char prod[32];		/* product */
+	char serial[32];	/* serial number */
 
 	/* Maximum packet size; one of: PACKET_SIZE_* */
 	int maxpacketsize;
@@ -122,6 +155,9 @@ struct usb_device {
 	int portnr;
 	struct usb_device *parent;
 	struct usb_device *children[USB_MAXCHILDREN];
+
+	/* Used if device is a hub*/
+	struct usb_hub_descriptor hubdescriptor;
 };
 
 /**********************************************************************
@@ -135,16 +171,6 @@ struct usb_device {
 	defined(CONFIG_USB_OMAP3) || defined(CONFIG_USB_DA8XX) || \
 	defined(CONFIG_USB_BLACKFIN) || defined(CONFIG_USB_AM35X)
 
-int usb_lowlevel_init(void);
-int usb_lowlevel_stop(void);
-int submit_bulk_msg(struct usb_device *dev, unsigned long pipe,
-			void *buffer, int transfer_len);
-int submit_control_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
-			int transfer_len, struct devrequest *setup);
-int submit_int_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
-			int transfer_len, int interval);
-void usb_event_poll(void);
-
 /* Defines */
 #define USB_UHCI_VEND_ID	0x8086
 #define USB_UHCI_DEV_ID		0x7112
@@ -153,75 +179,23 @@ void usb_event_poll(void);
 #error USB Lowlevel not defined
 #endif
 
-#ifdef CONFIG_USB_STORAGE
-
-#define USB_MAX_STOR_DEV 5
-/*block_dev_desc_t *usb_stor_get_dev(int index);*/
-int usb_stor_scan(int mode);
-int usb_stor_info(void);
-
-#endif
-
-#ifdef CONFIG_USB_KEYBOARD
-
-int drv_usb_kbd_init(void);
-int usb_kbd_deregister(void);
-
-#endif
-/* routines */
+/* Generic USB routines */
 int usb_init(void); /* initialize the USB Controller */
 int usb_stop(void); /* stop the USB Controller */
 
-
-int usb_set_protocol(struct usb_device *dev, int ifnum, int protocol);
-int usb_set_idle(struct usb_device *dev, int ifnum, int duration,
-			int report_id);
-struct usb_device *usb_get_dev_index(int index);
-int usb_control_msg(struct usb_device *dev, unsigned int pipe,
-			unsigned char request, unsigned char requesttype,
-			unsigned short value, unsigned short index,
-			void *data, unsigned short size, int timeout);
-int usb_bulk_msg(struct usb_device *dev, unsigned int pipe,
-			void *data, int len, int *actual_length, int timeout);
-int usb_submit_int_msg(struct usb_device *dev, unsigned long pipe,
-			void *buffer, int transfer_len, int interval);
-void usb_disable_asynch(int disable);
+int usb_scan_roothub(struct usb_device** root);
+int usb_hub_init(struct usb_device *dev);
+int usb_hub_scan(struct usb_device *dev, int port, struct usb_device **child);
+int usb_is_hub(struct usb_device *dev, int ifnum);
 int usb_maxpacket(struct usb_device *dev, unsigned long pipe);
-inline void wait_ms(unsigned long ms);
-int usb_get_configuration_no(struct usb_device *dev, unsigned char *buffer,
-				int cfgno);
-int usb_get_report(struct usb_device *dev, int ifnum, unsigned char type,
-			unsigned char id, void *buf, int size);
-int usb_get_class_descriptor(struct usb_device *dev, int ifnum,
-			unsigned char type, unsigned char id, void *buf,
-			int size);
-int usb_clear_halt(struct usb_device *dev, int pipe);
-int usb_string(struct usb_device *dev, int index, char *buf, size_t size);
-int usb_set_interface(struct usb_device *dev, int interface, int alternate);
 
-/* big endian -> little endian conversion */
-/* some CPUs are already little endian e.g. the ARM920T */
-#define __swap_16(x) \
-	({ unsigned short x_ = (unsigned short)x; \
-	 (unsigned short)( \
-		((x_ & 0x00FFU) << 8) | ((x_ & 0xFF00U) >> 8)); \
-	})
-#define __swap_32(x) \
-	({ unsigned long x_ = (unsigned long)x; \
-	 (unsigned long)( \
-		((x_ & 0x000000FFUL) << 24) | \
-		((x_ & 0x0000FF00UL) <<	 8) | \
-		((x_ & 0x00FF0000UL) >>	 8) | \
-		((x_ & 0xFF000000UL) >> 24)); \
-	})
-
-#ifdef __LITTLE_ENDIAN
-# define swap_16(x) (x)
-# define swap_32(x) (x)
-#else
-# define swap_16(x) __swap_16(x)
-# define swap_32(x) __swap_32(x)
-#endif
+/* Implemented in ehci-hcd.c */
+int submit_bulk_msg(struct usb_device *dev, unsigned long pipe, 
+	void *buffer, int length);
+int submit_control_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
+	int length, struct devrequest *setup);
+int submit_int_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
+	int length, int interval);
 
 /*
  * Calling this entity a "pipe" is glorifying it. A USB pipe
@@ -318,40 +292,5 @@ int usb_set_interface(struct usb_device *dev, int interface, int alternate);
 #define usb_pipeint(pipe)	(usb_pipetype((pipe)) == PIPE_INTERRUPT)
 #define usb_pipecontrol(pipe)	(usb_pipetype((pipe)) == PIPE_CONTROL)
 #define usb_pipebulk(pipe)	(usb_pipetype((pipe)) == PIPE_BULK)
-
-
-/*************************************************************************
- * Hub Stuff
- */
-struct usb_port_status {
-	unsigned short wPortStatus;
-	unsigned short wPortChange;
-} __attribute__ ((packed));
-
-struct usb_hub_status {
-	unsigned short wHubStatus;
-	unsigned short wHubChange;
-} __attribute__ ((packed));
-
-
-/* Hub descriptor */
-struct usb_hub_descriptor {
-	unsigned char  bLength;
-	unsigned char  bDescriptorType;
-	unsigned char  bNbrPorts;
-	unsigned short wHubCharacteristics;
-	unsigned char  bPwrOn2PwrGood;
-	unsigned char  bHubContrCurrent;
-	unsigned char  DeviceRemovable[(USB_MAXCHILDREN+1+7)/8];
-	unsigned char  PortPowerCtrlMask[(USB_MAXCHILDREN+1+7)/8];
-	/* DeviceRemovable and PortPwrCtrlMask want to be variable-length
-	   bitmaps that hold max 255 entries. (bit0 is ignored) */
-} __attribute__ ((packed));
-
-
-struct usb_hub_device {
-	struct usb_device *pusb_dev;
-	struct usb_hub_descriptor desc;
-};
 
 #endif /*_USB_H_ */

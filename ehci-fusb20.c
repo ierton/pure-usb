@@ -23,7 +23,7 @@
 #include "ehci-core.h"
 #include "ehci.h"
 
-int ehci_hcd_init(void)
+int ehci_specific_init(void)
 {
 	/* Global capability regs pointer */
 	hccr = (struct ehci_hccr *)((uint32_t)CONFIG_FUSB20_BASE);
@@ -37,8 +37,7 @@ int ehci_hcd_init(void)
 	return 0;
 }
 
-int ehci_hcd_stop(void)
+void ehci_specific_stop(void)
 {
-	return 0;
 }
 

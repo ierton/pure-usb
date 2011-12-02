@@ -26,4 +26,7 @@ extern int rootdev;
 extern struct ehci_hccr *hccr;
 extern volatile struct ehci_hcor *hcor;
 
+int ehci_specific_init(void);
+void ehci_specific_stop(void);
+
 #endif
