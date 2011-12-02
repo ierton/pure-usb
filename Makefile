@@ -1,8 +1,3 @@
-
-ifeq ($(CROSS_COMPILE),)
-CROSS_COMPILE=arm-none-linux-gnueabi-
-endif
-
 # Base address to load the program
 RAM_BASE=0x00100010
 
@@ -17,6 +12,9 @@ OBJDUMP = $(CROSS_COMPILE)objdump
 
 gccincdir := $(shell $(CC) -print-file-name=include)
 
+CPPFLAGS = -DTEXT_BASE=$(RAM_BASE) \
+		-D__KERNEL__
+
 CFLAGS = -nostdinc \
 		-fno-common \
 		-fno-builtin \
@@ -28,38 +26,47 @@ CFLAGS = -nostdinc \
 		-Wstrict-prototypes \
 		-fno-stack-protector \
 		-I./ \
-		-DTEXT_BASE=$(RAM_BASE) \
-		-D__KERNEL__ \
-		-Os \
 		-g -Wall \
-		-marm -mcpu=arm1176jzf-s \
-		-isystem $(gccincdir)
+		-marm \
+		-mtune=arm1176jzf-s \
+		-isystem $(gccincdir) \
+		-Os
 
-# Name of target program
+ASFLAGS = $(CFLAGS)
+
+AOBJ=start.o asm/_ashldi3.o asm/_ashrdi3.o asm/_divsi3.o asm/_lshrdi3.o asm/_modsi3.o asm/_udivsi3.o asm/_umodsi3.o
+
+COBJ_COMMON=main.o vsprintf.o console.o string.o ctype.o asm/div0.o asm/div64.o ehci-hcd.o ehci-fusb20.o usb.o ohci-test.o time.o
+
+COBJ_BOARD=$(COBJ_COMMON) ns16550.o hang.o
+
+COBJ_MODEL=$(COBJ_COMMON) tube.o
+
+COBJ=$(COBJ_MODEL) $(COBJ_COMMON)
+
+CSRC = $(subst .o,.c,$(COBJ))
+ASRC = $(subst .o,.S,$(AOBJ))
+
 PROG=pure-usb
 
-# List of all *c sources
-CSRC=main.c ns16550.c vsprintf.c console.c string.c ctype.c asm/div0.c hang.c asm/div64.c ehci-hcd.c ehci-fusb20.c usb.c ohci-test.c time.c
+TARGETS=$(PROG)-board.bin $(PROG)-model.bin
 
-#List of all *S (asm) sources
-ASRC=start.S asm/_ashldi3.S asm/_ashrdi3.S asm/_divsi3.S asm/_lshrdi3.S asm/_modsi3.S asm/_udivsi3.S asm/_umodsi3.S
-
-COBJ = $(subst .c,.o,$(CSRC))
-AOBJ = $(subst .S,.o,$(ASRC))
-
-all: $(PROG).bin
+all: $(TARGETS)
 	
-$(AOBJ): %.o : %.S
-	$(CC) $(CFLAGS) -c -o $@ $<
+#$(AOBJ): %.o : %.S
+	#$(CC) $(CFLAGS) -c -o $@ $<
 	
-$(COBJ): %.o : %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+#$(COBJ): %.o : %.c
+	#$(CC) $(CFLAGS) -c -o $@ $<
 	
-$(PROG).elf: $(COBJ) $(AOBJ)
+$(PROG)-board.elf: $(COBJ_BOARD) $(AOBJ)
 	$(LD) -T boot.lds -Ttext=$(RAM_BASE) $^ -o $@
 
-$(PROG).bin: $(PROG).elf
-	$(OBJCOPY) -v -O binary $^ $@
+$(PROG)-model.elf: $(COBJ_MODEL) $(AOBJ)
+	$(LD) -T boot.lds -Ttext=$(RAM_BASE) $^ -o $@
+
+$(TARGETS): %.bin : %.elf
+	$(OBJCOPY) -v -O binary $< $@
 
 clean:
 	rm -f *.a
@@ -75,7 +82,7 @@ clean:
 disassemble: $(PROG).elf
 	$(OBJDUMP) -d $(PROG).elf
 
-.depend:  Makefile $(CSRC) $(ASRC)
+.depend: Makefile $(CSRC) $(ASRC)
 	@for f in $(CSRC) $(ASRC); do \
 		$(CC) -M $(CFLAGS) $$f >> $@ ; \
 	done
