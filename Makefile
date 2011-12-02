@@ -17,9 +17,6 @@ OBJDUMP = $(CROSS_COMPILE)objdump
 
 gccincdir := $(shell $(CC) -print-file-name=include)
 
-# -O0          : Disable optimizations
-# -g           : Generate debug info
-# -ffixed-r8   : Don't touch register r8
 CFLAGS = -nostdinc \
 		-fno-common \
 		-fno-builtin \
@@ -42,10 +39,10 @@ CFLAGS = -nostdinc \
 PROG=pure-usb
 
 # List of all *c sources
-CSRC=main.c ns16550.c vsprintf.c console.c string.c ctype.c asm/div0.c asm/hang.c asm/div64.c ehci-hcd.c ehci-fusb20.c usb.c ohci-test.c time.c
+CSRC=main.c ns16550.c vsprintf.c console.c string.c ctype.c asm/div0.c hang.c asm/div64.c ehci-hcd.c ehci-fusb20.c usb.c ohci-test.c time.c
 
 #List of all *S (asm) sources
-ASRC=start.S asm/_ashldi3.o asm/_ashrdi3.o asm/_divsi3.o asm/_lshrdi3.o asm/_modsi3.o asm/_udivsi3.o asm/_umodsi3.o
+ASRC=start.S asm/_ashldi3.S asm/_ashrdi3.S asm/_divsi3.S asm/_lshrdi3.S asm/_modsi3.S asm/_udivsi3.S asm/_umodsi3.S
 
 COBJ = $(subst .c,.o,$(CSRC))
 AOBJ = $(subst .S,.o,$(ASRC))
@@ -78,4 +75,10 @@ clean:
 disassemble: $(PROG).elf
 	$(OBJDUMP) -d $(PROG).elf
 
+.depend:  Makefile $(CSRC) $(ASRC)
+	@for f in $(CSRC) $(ASRC); do \
+		$(CC) -M $(CFLAGS) $$f >> $@ ; \
+	done
+
+-include .depend
 
