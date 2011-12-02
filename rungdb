@@ -37,7 +37,7 @@ fi
 echo ICEIP is $ICEIP
 echo GDB is $GDB
 
-PRG=pure-usb.elf
+PRG=pure-usb-board.elf
 PRG_BIN=`basename $PRG .elf`.bin
 test -f $PRG || die "File '$PRG' not found"
 test -f $PRG_BIN || die "File '$PRG.bin' not found"
