@@ -67,17 +67,12 @@ static int console_tstc(void)
 
 static void console_putc(const char c)
 {
-	if(c == '\n') {
-		SERIAL(putc)('\r');
-	}
 	SERIAL(putc)(c);
 }
 
 static void console_puts(const char *s)
 {
-	while (*s) {
-		console_putc(*s++);
-	}
+	SERIAL(puts)(s);
 }
 
 int fgetc(int file)

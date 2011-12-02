@@ -195,7 +195,7 @@ void serial_init(void)
 	serial_out(UART_LCRVAL, &g_ns16550->lcr);
 }
 
-void serial_putc (char c)
+static void _serial_putc (char c)
 {
 	while ((serial_in(&g_ns16550->lsr) & UART_LSR_THRE) == 0);
 	serial_out(c, &g_ns16550->thr);
@@ -208,6 +208,21 @@ void serial_putc (char c)
 	 */
 	if (c == '\n')
 		WATCHDOG_RESET();
+}
+
+void serial_putc (char c)
+{
+	if(c == '\n') {
+		_serial_putc('\r');
+	}
+	_serial_putc(c);
+}
+
+void serial_puts(const char *s)
+{
+	while (*s) {
+		serial_putc(*s++);
+	}
 }
 
 char serial_getc (void)
