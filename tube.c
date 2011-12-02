@@ -13,7 +13,7 @@ void serial_putc(char c)
 	serial_puts(str);
 }
 
-void serial_puts(char* c) 
+void serial_puts(const char* c) 
 {
 	volatile int* tube = (volatile int*)TUBE_BASE;
 	while(1){
@@ -39,6 +39,7 @@ char serial_getc(void)
 {
 	serial_puts("serial_getc: not implemented. stopping the program.\n");
 	hang();
+	return 0;
 }
 
 int	serial_tstc(void)
