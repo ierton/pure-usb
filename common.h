@@ -38,7 +38,6 @@ typedef volatile unsigned char	vu_char;
 #include <stdarg.h>
 #include <string.h>
 #include <linux/types.h>
-#include <ns16550.h>
 
 #define error(fmt, args...) do {					\
 		printf("ERROR: " fmt "\nat %s:%d/%s()\n",		\
@@ -99,25 +98,17 @@ void hang(void);
 /* lib/vsprintf.c */
 ulong	simple_strtoul(const char *cp,char **endp,unsigned int base);
 unsigned long long	simple_strtoull(const char *cp,char **endp,unsigned int base);
-long	simple_strtol(const char *cp,char **endp,unsigned int base);
-void	panic(const char *fmt, ...)
+long simple_strtol(const char *cp,char **endp,unsigned int base);
+void panic(const char *fmt, ...)
 		__attribute__ ((format (__printf__, 1, 2)));
 int	sprintf(char * buf, const char *fmt, ...)
 		__attribute__ ((format (__printf__, 2, 3)));
 int	vsprintf(char *buf, const char *fmt, va_list args);
 
 /* $(CPU)/serial.c */
-int	serial_init   (void);
-void	serial_exit   (void);
-void	serial_setbrg (void);
-void	serial_putc   (const char);
-void	serial_putc_raw(const char);
-void	serial_puts   (const char *);
-int	serial_getc   (void);
-int	serial_tstc   (void);
 int	ctrlc (void);
 int	had_ctrlc (void);	/* have we had a Control-C since last clear? */
-void	clear_ctrlc (void);	/* clear the Control-C condition */
+void clear_ctrlc (void);	/* clear the Control-C condition */
 int	disable_ctrlc (int);	/* 1 to disable, 0 to enable Control-C detect */
 
 /* console.c */
@@ -141,7 +132,6 @@ void mdelay(unsigned long msec);
 #define stdout		1
 #define stderr		2
 #define MAX_FILES	3
-
 
 /* Put only stuff here that the assembler can digest */
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))

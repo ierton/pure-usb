@@ -23,27 +23,20 @@
 
 #include <common.h>
 #include <stdarg.h>
+#include <serial.h>
 
-NS16550_t g_port;
+#define SERIAL(x) serial_##x
 
-#define SERIAL(x) NS16550_##x
-#define SERIAL_PORT(addr) ((volatile struct NS16550 *)(addr))
+
+/* test if ctrl-c was pressed */
+static int ctrlc_disabled;
+static int ctrlc_was_pressed;
 
 void console_init(void)
 {
-	const int MODE_X_DIV = 16;
-
-	/* Compute divisor value. Normally, we should simply return:
-	 *   CONFIG_SYS_NS16550_CLK) / MODE_X_DIV / gd->baudrate
-	 * but we need to round that value by adding 0.5.
-	 * Rounding is especially important at high baud rates.
-	 */
-	const int divisor = 
-		(CONFIG_SYS_NS16550_CLK + (CONFIG_BAUDRATE * (MODE_X_DIV / 2))) /
-		(MODE_X_DIV * CONFIG_BAUDRATE);
-
-	g_port = SERIAL_PORT(CONFIG_SYS_NS16550_COM1);
-	SERIAL(init)(g_port,divisor);
+	ctrlc_disabled = 0;
+	ctrlc_was_pressed = 0;
+	SERIAL(init)();
 }
 
 /*
@@ -54,11 +47,8 @@ void console_init(void)
  */
 static int console_getc(void)
 {
-	unsigned char ret;
-
 	/* This is never called with testcdev == NULL */
-	ret = SERIAL(getc)(g_port);
-	return ret;
+	return SERIAL(getc)();
 }
 
 static int console_tstc(void)
@@ -66,7 +56,7 @@ static int console_tstc(void)
 	int ret;
 
 	disable_ctrlc(1);
-	ret = SERIAL(tstc)(g_port);
+	ret = SERIAL(tstc)();
 	if (ret > 0) {
 		return ret;
 	}
@@ -78,9 +68,9 @@ static int console_tstc(void)
 static void console_putc(const char c)
 {
 	if(c == '\n') {
-		SERIAL(putc)(g_port,'\r');
+		SERIAL(putc)('\r');
 	}
-	SERIAL(putc)(g_port,c);
+	SERIAL(putc)(c);
 }
 
 static void console_puts(const char *s)
@@ -193,9 +183,6 @@ int vprintf(const char *fmt, va_list args)
 	return i;
 }
 
-/* test if ctrl-c was pressed */
-static int ctrlc_disabled = 0;	/* see disable_ctrl() */
-static int ctrlc_was_pressed = 0;
 int ctrlc(void)
 {
 	if(ctrlc_was_pressed)
