@@ -7,8 +7,6 @@ void main( void )
 {
 	int i;
 	int ret;
-	struct usb_device *roothub;
-	struct usb_device *dev;
 
 	console_init();
 
@@ -38,6 +36,10 @@ void main( void )
 			printf("failed to scan for roothub, errcode %d\n", ret);
 			goto out;
 		}
+		if(roothub == NULL) {
+			printf("unable to find roothub, this is likely an error\n");
+			goto out;
+		}
 
 		ret = usb_hub_init(roothub);
 		if(ret < 0) {
@@ -49,6 +51,10 @@ void main( void )
 		if(ret < 0) {
 			printf("failed to scan the hub, errcode %d\n", ret);
 			goto out;
+		}
+		if(dev == NULL) {
+			printf("no usb device found on port 0\n");
+			continue;
 		}
 	}
 
