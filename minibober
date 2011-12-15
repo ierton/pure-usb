@@ -6,7 +6,7 @@ CWD=`pwd`
 # Usage string
 usage() { cat <<EOF
 Usage:
-	`basename $THIS` IMAGE.bin
+	`basename $THIS` [-gui] [-waves] IMAGE.bin
 EOF
 }
 
@@ -23,8 +23,19 @@ do_ncvhdl() { ncvhdl -v93 $1 -LOGFILE `basename $1.log` >/dev/null 2>&1 ; }
 BINIMAGE=""
 while test -n "$1"; do
 	case $1 in
-		-h|--help) usage ; exit 1 ;;
-		*) BINIMAGE=$CWD/$1 ;;
+		-h|--help) 
+			usage
+			exit 1 
+			;;
+		gui|-gui|--gui)
+			setenv TEST_OPTION "${TEST_OPTION} +gui +access+rwc"
+			;;
+		waves|-waves|--waves)
+			setenv TEST_OPTION "${TEST_OPTION} +ncaccess+rwc +define+Waves"
+			;;
+		*) 
+			BINIMAGE=$CWD/$1
+			;;
 	esac
 	shift
 done
@@ -89,7 +100,7 @@ setenv LIB_PATH_SN ${HDTVLIB}/std-spc/veri/CS101/CS101SN/sim/std/
 setenv LIB_PATH_UDP ${HDTVLIB}/std-spc/veri/CS101/common/sim/udp/
 setenv SSP_AXI_MEM ${TOP_DESIGN}/interfaces/axi2serial_mem/sim/M25P40.v 
 setenv HDTV_SVN  ${TOP_DESIGN}
-setenv TEST_OPTION "+define+TIMEOUT=30000"
+setenv TEST_OPTION "${TEST_OPTION} +define+TIMEOUT=30000"
 setenv REGRESSION ${TOP_DESIGN}/system/soft/alltests/regression
 
 msg "Building regression (log is in `pwd`/make.log)"
@@ -176,6 +187,8 @@ ncverilog \
 	-f ${TOP_DESIGN}/system/runr3p0.opt +nc64bit \
 	+libext+.v+.v_rtl+.vp+.hnl+.vhd +define+TEST_REGRESSION \
 	+mixedlang \
-	${TEST_OPTION} +ncnowarn+CUVWSP +ncntcnotchks \
-	${TEST_OPTION} +nccdslib+cds_.lib
+	+ncnowarn+CUVWSP \
+	+ncntcnotchks \
+	+nccdslib+cds_.lib \
+	${TEST_OPTION} 
 
