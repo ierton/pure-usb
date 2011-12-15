@@ -137,13 +137,14 @@ perl $HEX2IM0 image.hex test ||
 rm JTAGbsi 2>/dev/null
 touch JTAGbsi
 
+# Should we remove it from minibober?
 setenv I2C_SLAVE I2C_CLEAN
 setenv TEST_OPTION "${TEST_OPTION} +define+${I2C_SLAVE}"
 
-msg "Processing HDTVLIB's RAM*v_rtl files (logs are in `pwd`)"
+msg "Processing HDTVLIB's v_rtl files"
 do_ncvlog ${HDTVLIB}/ccl/veri_rtl/RAMDP128X32.v_rtl
 do_ncvlog ${HDTVLIB}/ccl/veri_rtl/RAMDP512X8.v_rtl
-msg "Processing GRETH *vhd files (logs are in `pwd`)"
+msg "Processing GRETH files"
 do_ncvhdl ${TOP_DESIGN}/greth/rtl/version.vhd
 do_ncvhdl ${TOP_DESIGN}/greth/rtl/stdlib.vhd
 do_ncvhdl ${TOP_DESIGN}/greth/rtl/amba.vhd
