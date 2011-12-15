@@ -1,3 +1,12 @@
+ifeq ($(BUILDFOR),model)
+RAM_BASE=0x00100000
+BUILDFOR_MACRO := -DCONFIG_MODEL
+endif
+ifeq ($(BUILDFOR),board)
+RAM_BASE=0x00100010
+BUILDFOR_MACRO := -DCONFIG_BOARD
+endif
+
 ifndef RAM_BASE
 $(error RAM_BASE is not set)
 endif
@@ -21,10 +30,11 @@ OBJDUMP = $(CROSS_COMPILE)objdump
 
 gccincdir := $(shell $(CC) -print-file-name=include)
 
-CPPFLAGS = -DTEXT_BASE=$(RAM_BASE) \
-		-D__KERNEL__
+CPPFLAGS := -DTEXT_BASE=$(RAM_BASE) \
+		-D__KERNEL__ \
+		$(BUILDFOR_MACRO)
 
-CFLAGS = -nostdinc \
+CFLAGS := -nostdinc \
 		-fno-common \
 		-fno-builtin \
 		-ffixed-r8 \
@@ -45,7 +55,7 @@ ASFLAGS = $(CFLAGS)
 
 AOBJ_LIBS=$(AOBJ) start.o asm/_ashldi3.o asm/_ashrdi3.o asm/_divsi3.o asm/_lshrdi3.o asm/_modsi3.o asm/_udivsi3.o asm/_umodsi3.o
 
-COBJ_LIBS=$(COBJ) main.o vsprintf.o console.o string.o ctype.o asm/div0.o asm/div64.o ehci-hcd.o ehci-fusb20.o usb.o ohci-test.o time.o
+COBJ_LIBS=$(COBJ) main.o vsprintf.o console.o string.o ctype.o asm/div0.o asm/div64.o ehci-hcd.o ehci-fusb20.o usb.o ohci-test.o
 
 CSRC_LIBS = $(subst .o,.c,$(COBJ_LIBS))
 ASRC_LIBS = $(subst .o,.S,$(AOBJ_LIBS))

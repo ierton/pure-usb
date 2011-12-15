@@ -1,6 +1,6 @@
-RAM_BASE=0x00100010
+BUILDFOR=board
 
-COBJ=ns16550.o hang.o
+COBJ=ns16550.o hang.o time_board.o
 
 PROG=pure-usb-board
 
