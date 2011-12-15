@@ -1,0 +1,71 @@
+ifndef RAM_BASE
+$(error RAM_BASE is not set)
+endif
+
+ifndef PROG
+$(error PROG is not set)
+endif
+
+ifndef CROSS_COMPILE
+$(error CROSS_COMPILE is not set)
+endif
+
+AS = $(CROSS_COMPILE)as
+CC = $(CROSS_COMPILE)gcc
+LD = $(CROSS_COMPILE)ld
+AR = $(CROSS_COMPILE)ar
+OBJCOPY = $(CROSS_COMPILE)objcopy
+OBJDUMP = $(CROSS_COMPILE)objdump 
+
+.PHONY: clean all dump
+
+gccincdir := $(shell $(CC) -print-file-name=include)
+
+CPPFLAGS = -DTEXT_BASE=$(RAM_BASE) \
+		-D__KERNEL__
+
+CFLAGS = -nostdinc \
+		-fno-common \
+		-fno-builtin \
+		-ffixed-r8 \
+		-msoft-float \
+		-ffreestanding \
+		-mabi=aapcs-linux \
+		-mno-thumb-interwork \
+		-Wstrict-prototypes \
+		-fno-stack-protector \
+		-I./ \
+		-g -Wall \
+		-marm \
+		-mtune=arm1176jzf-s \
+		-isystem $(gccincdir) \
+		-Os
+
+ASFLAGS = $(CFLAGS)
+
+AOBJ_LIBS=$(AOBJ) start.o asm/_ashldi3.o asm/_ashrdi3.o asm/_divsi3.o asm/_lshrdi3.o asm/_modsi3.o asm/_udivsi3.o asm/_umodsi3.o
+
+COBJ_LIBS=$(COBJ) main.o vsprintf.o console.o string.o ctype.o asm/div0.o asm/div64.o ehci-hcd.o ehci-fusb20.o usb.o ohci-test.o time.o
+
+CSRC_LIBS = $(subst .o,.c,$(COBJ_LIBS))
+ASRC_LIBS = $(subst .o,.S,$(AOBJ_LIBS))
+
+all: $(PROG).bin
+	
+$(PROG).elf: $(COBJ_LIBS) $(AOBJ_LIBS) boot.lds
+	$(LD) -T boot.lds -Ttext=$(RAM_BASE) $^ -o $@
+
+$(PROG).bin: $(PROG).elf
+	$(OBJCOPY) -v -O binary $< $@
+
+# Show the disassembly
+disassemble: $(PROG).elf
+	$(OBJDUMP) -d $(PROG).elf
+
+$(PROG).depend: Makefile $(CSRC_LIBS) $(ASRC_LIBS)
+	@for f in $(CSRC_LIBS) $(ASRC_LIBS); do \
+		$(CC) -M $(CFLAGS) $$f >> $@ ; \
+	done
+
+-include $(PROG).depend
+
