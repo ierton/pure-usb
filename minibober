@@ -1,0 +1,181 @@
+#!/bin/sh
+
+THIS=$0
+CWD=`pwd`
+
+# Usage string
+usage() { cat <<EOF
+Usage:
+	`basename $THIS` IMAGE.bin
+EOF
+}
+
+# Useful wrapper functions
+setenv() { local v=$1 ; shift ;  eval "export $v='$@'" ; }
+die() { echo $@ >&2 ; exit 1; }
+die_usage() { echo $@ >&2 ; usage ; exit 1 ; }
+msg() { echo $@ ; }
+source() { . $1 ; }
+do_ncvlog() { ncvlog $1 -LOGFILE `basename $1.log` >/dev/null 2>&1 ; }
+do_ncvhdl() { ncvhdl -v93 $1 -LOGFILE `basename $1.log` >/dev/null 2>&1 ; }
+
+# Command line parsing
+BINIMAGE=""
+while test -n "$1"; do
+	case $1 in
+		-h|--help) usage ; exit 1 ;;
+		*) BINIMAGE=$CWD/$1 ;;
+	esac
+	shift
+done
+test -f "$BINIMAGE" || die_usage "Binary image $BINIMAGE not found"
+test -d "$TOP_DESIGN" || die "Please set TOP_DESIGN variable to a valid directory path"
+
+# Switch to temporary dir
+setenv WORKDIR /tmp/bober
+mkdir "$WORKDIR" 2>/dev/null
+cd "$WORKDIR" || die "Unable to do 'cd $WORKDIR'"
+rm -rf * 2>/dev/null
+mkdir "compilelog" 2>/dev/null
+
+# Main part (cp from bober.chs)
+setenv TESTBENCH ${TOP_DESIGN}/system/TESTBENCHr3p0.v
+setenv FILELIST ${TOP_DESIGN}/system/FILELIST.vc
+
+setenv SVN_ROOT /opt/r42/svn
+setenv ARM1176JZFS_HOME /opt/r42/simulation_models/DSM/cadence_nc_verilog_Linux-64/ARM1176JZFS_licensed_r0p6-00rel0
+source $ARM1176JZFS_HOME/setup.sh ||
+	die "failed to source \$ARM1176JZFS_HOME/setup.sh"
+
+setenv ETM11CS_HOME /opt/r42/simulation_models/DSM/cadence_nc_verilog_Linux-64/ETM11CS_licensed_r0p2-00rel0
+source $ETM11CS_HOME/setup.sh ||
+	die "failed to source \$ETM11CS_HOME/setup.sh"
+
+setenv ARMDSMDIR /opt/r42/simulation_models/DSM/cadence_nc_verilog_Linux-64/ARM1176JZFS_licensed_r0p7-00rel0/ARM1176JZFS/timing_wrapper/
+setenv ETMDSMDIR /opt/r42/simulation_models/DSM/cadence_nc_verilog_Linux-64/ETM11CS_licensed_r0p2-00rel0/ETM11CS/extra_wrapper/
+setenv TOPDIR /home/pshevch/projects/hdtv
+setenv FUJITSU_IP /opt/r42/fujitsu/ip
+setenv ARM_IP ${TOPDIR}/ARM-IP
+setenv IP ${TOPDIR}/IP
+setenv HDTVLIB /opt/r42/fujitsu/lib/hdtv-lib
+setenv INTMEMAXI ${ARM_IP}/IntMemAXI/rtl/
+setenv BootROM ${ARM_IP}/bootrom/rtl/
+setenv ARM_ETM ${TOPDIR}/ARM1176_AND_ETM11CS/rtl/
+setenv AMP_ROOT ${FUJITSU_IP}/AMP/lnx64
+#setenv GPIOf_dir /home/petrd/fasp1176/verilog/APB/GPIO
+setenv F_TVENC ${AMP_ROOT}/AMP_F_TVENC_Lnx_64bit/F_TVENC/shells
+setenv F_MAC3H ${AMP_ROOT}/F_MAC3_MDL/F_MAC3H/shells/
+setenv PCMCIA ${AMP_ROOT}/F_PCMCIA1_MDL/F_PCMCIA1/shells/
+setenv F_UART3 ${AMP_ROOT}/AMP_F_UART3_Lnx_64bit/F_UART3/shells
+setenv F_HDMI ${AMP_ROOT}/MDL/F_HDMITX1P2_L/shells
+setenv HLFUSEIF ${AMP_ROOT}/MDL/HLFUSEIF/shells
+setenv AMP_LIBPATH ${FUJITSU_IP}/AMP/lnx64
+setenv LD_LIBRARY_PATH  ${AMP_LIBPATH}/tools.lnx86/lib/64bit:${LD_LIBRARY_PATH}
+setenv BSTROOT /opt/r42/simulation_models/BST
+setenv DIR_armBST $BSTROOT
+setenv CS101LIB ${HDTVLIB}
+setenv CS101_CCL ${CS101LIB}/ccl/veri_rtl
+setenv CS101_STD_COMMON ${CS101LIB}/std-spc/veri/CS101/common/sim/std
+setenv CS101_XL_COMMON ${CS101LIB}/std-spc/veri/CS101/common/sim/xl
+setenv CS101_UDP_COMMON ${CS101LIB}/std-spc/veri/CS101/common/sim/udp
+setenv CS101_STD_SN ${CS101LIB}/std-spc/veri/CS101/CS101SN/sim/std
+setenv CS101_STD_SL ${CS101LIB}/std-spc/veri/CS101/CS101SL/sim/std
+setenv CS101_STD_SZ ${CS101LIB}/std-spc/veri/CS101/CS101SZ/sim/std
+setenv CS101_STD_SPC ${CS101LIB}/std-spc/veri/CS101/spc/common/sim/std
+setenv CS101_XL_SPC ${CS101LIB}/std-spc/veri/CS101/spc/common/sim/xl
+setenv RAMLIB ${HDTVLIB}/ccl/veri_rtl/
+setenv RAMS "${RAMLIB}/RAMDP512X8.v_rtl ${RAMLIB}/RAMRG32X64.v_rtl ${RAMLIB}/RAMRG32X84.v_rtl ${RAMLIB}/RAMRG128X8.v_rtl ${RAMLIB}/RAMDP128X64.v_rtl"
+setenv LIB_PATH_SN ${HDTVLIB}/std-spc/veri/CS101/CS101SN/sim/std/
+setenv LIB_PATH_UDP ${HDTVLIB}/std-spc/veri/CS101/common/sim/udp/
+setenv SSP_AXI_MEM ${TOP_DESIGN}/interfaces/axi2serial_mem/sim/M25P40.v 
+setenv HDTV_SVN  ${TOP_DESIGN}
+setenv TEST_OPTION "+define+TIMEOUT=30000"
+setenv REGRESSION ${TOP_DESIGN}/system/soft/alltests/regression
+
+msg "Building regression (log is in `pwd`/make.log)"
+(cd ${REGRESSION} && make clean && make AUTOMAKE=1 ASMTUBE=1) >make.log 2>&1 ||
+	die "make alltests failed"
+
+cp -t . ${REGRESSION}/test_rom*.hex ||
+	die "Failed to obtain test_rom image"
+
+cp ${TOP_DESIGN}/system/soft/total_test/EFUR0080W032B.code.0 OTP_ROM.hex ||
+	die "Faield to copy OTP_ROM.hex"
+
+setenv nmc3_test_path Test8/Test_8_4/NMC/RAMY8SPRAM2MB_AMB2
+cp ${TOP_DESIGN}/nmc3/sim/test/core_tests/${nmc3_test_path}_0.hex nmc_0.hex ||
+	die
+cp ${TOP_DESIGN}/nmc3/sim/test/core_tests/${nmc3_test_path}_1.hex nmc_1.hex ||
+	die
+
+cp ${TOP_DESIGN}/system/cds_.lib . || die
+
+
+setenv BIN2HEX "${TOP_DESIGN}/system/soft/bin/tohex"
+setenv HEX2IM0 "${TOP_DESIGN}/system/soft/convert_hex_IM0.pl"
+
+test -x "$BIN2HEX" || die "BIN2HEX not found"
+test -r "$HEX2IM0" || die "HEX2IM0 not found"
+
+msg "Building hex memory images"
+$BIN2HEX $BINIMAGE > image.hex ||
+	die "Failed to convert $BINIMAGE to image.hex"
+perl $HEX2IM0 image.hex test ||
+	die "Failed to convert image.hex to the set of IM0 images"
+
+rm JTAGbsi 2>/dev/null
+touch JTAGbsi
+
+setenv I2C_SLAVE I2C_CLEAN
+setenv TEST_OPTION "${TEST_OPTION} +define+${I2C_SLAVE}"
+
+msg "Processing HDTVLIB's RAM*v_rtl files (logs are in `pwd`)"
+do_ncvlog ${HDTVLIB}/ccl/veri_rtl/RAMDP128X32.v_rtl
+do_ncvlog ${HDTVLIB}/ccl/veri_rtl/RAMDP512X8.v_rtl
+msg "Processing GRETH *vhd files (logs are in `pwd`)"
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/version.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/stdlib.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/amba.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/devices.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/greth_pkg.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/eth_ahb_mst.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/eth_rstgen.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/ethcomp.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/gencomp.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/greth_rx.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/greth_tx.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/allmem.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/net.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/ethernet_mac.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/misc.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/syncram_2p.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/grethc.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/greth.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/greth_module.vhd
+do_ncvhdl ${TOP_DESIGN}/greth/rtl/phy.vhd
+
+msg "Launching simulation (log is in `pwd`/ncverilog.log)"
+ncverilog \
+	-l ncverilog.log \
+	+loadpli1=${MG_LIB}/cadence_nc_verilog/mm_nc_dynamic:mgboot_nc \
+	+incdir+${LMC_HOME}/sim/pli/src \
+	$ARMDSMDIR/ARM1176JZFS.v \
+	$ETMDSMDIR/ETM11CS.v \
+	$TESTBENCH \
+	${TOP_DESIGN}/toplevel/DECODERr3p0.v \
+	$SSP_AXI_MEM \
+	-y ${RAMLIB} \
+	-y ${AMP_LIBPATH}/F_MAC3_MDL/F_MAC3H/shells/ \
+	-y ${AMP_LIBPATH}/F_PCMCIA1_MDL/F_PCMCIA1/shells/ \
+	-y ${AMP_LIBPATH}/AMP_F_UART3_Lnx_64bit/F_UART3/shells \
+	-y $LIB_PATH_SN -y $LIB_PATH_UDP \
+	-y ${F_TVENC} -y ${F_HDMI} -y ${HLFUSEIF} \
+	-y $CS101_CCL -y $CS101_STD_COMMON -y $CS101_XL_COMMON \
+	-y $CS101_STD_SN -y $CS101_STD_SL -y $CS101_STD_SZ \
+	-y $CS101_STD_SPC -y $CS101_XL_SPC -y $CS101_UDP_COMMON \
+	-f ${TOP_DESIGN}/system/runr3p0.opt +nc64bit \
+	+libext+.v+.v_rtl+.vp+.hnl+.vhd +define+TEST_REGRESSION \
+	+mixedlang \
+	${TEST_OPTION} +ncnowarn+CUVWSP +ncntcnotchks \
+	${TEST_OPTION} +nccdslib+cds_.lib
+
