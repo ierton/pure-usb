@@ -6,7 +6,10 @@ CWD=`pwd`
 # Usage string
 usage() { cat <<EOF
 Usage:
-	`basename $THIS` [-gui] [-waves] IMAGE.bin
+	`basename $THIS` [-C CWD] [-F] [-gui] [-waves] IMAGE.bin
+	-C CWD	Change working directory to CWD (default is 
+		~/.minibober)
+	-F	Clean working directory before run
 EOF
 }
 
@@ -18,36 +21,6 @@ msg() { echo $@ ; }
 source() { . $1 ; }
 do_ncvlog() { ncvlog $1 -LOGFILE `basename $1.log` >/dev/null 2>&1 ; }
 do_ncvhdl() { ncvhdl -v93 $1 -LOGFILE `basename $1.log` >/dev/null 2>&1 ; }
-
-# Command line parsing
-BINIMAGE=""
-while test -n "$1"; do
-	case $1 in
-		-h|--help) 
-			usage
-			exit 1 
-			;;
-		gui|-gui|--gui)
-			setenv TEST_OPTION "${TEST_OPTION} +gui +access+rwc"
-			;;
-		waves|-waves|--waves)
-			setenv TEST_OPTION "${TEST_OPTION} +ncaccess+rwc +define+Waves"
-			;;
-		*) 
-			BINIMAGE=$CWD/$1
-			;;
-	esac
-	shift
-done
-test -f "$BINIMAGE" || die_usage "Binary image $BINIMAGE not found"
-test -d "$TOP_DESIGN" || die "Please set TOP_DESIGN variable to a valid directory path"
-
-# Switch to temporary dir
-setenv WORKDIR /tmp/bober
-mkdir "$WORKDIR" 2>/dev/null
-cd "$WORKDIR" || die "Unable to do 'cd $WORKDIR'"
-rm -rf * 2>/dev/null
-mkdir "compilelog" 2>/dev/null
 
 # Main part (cp from bober.chs)
 setenv TESTBENCH ${TOP_DESIGN}/system/TESTBENCHr3p0.v
@@ -102,6 +75,45 @@ setenv SSP_AXI_MEM ${TOP_DESIGN}/interfaces/axi2serial_mem/sim/M25P40.v
 setenv HDTV_SVN  ${TOP_DESIGN}
 setenv TEST_OPTION "${TEST_OPTION} +define+TIMEOUT=30000"
 setenv REGRESSION ${TOP_DESIGN}/system/soft/alltests/regression
+# Should we remove it from minibober?
+setenv I2C_SLAVE I2C_CLEAN
+setenv TEST_OPTION "${TEST_OPTION} +define+${I2C_SLAVE}"
+setenv WORKDIR "${HOME}/.minibober"
+
+# Command line parsing
+BINIMAGE=""
+ERASEWD=n
+
+while test -n "$1"; do
+	case $1 in
+		-h|--help)
+			usage
+			exit 1 
+			;;
+		gui|-gui|--gui)
+			setenv TEST_OPTION "${TEST_OPTION} +gui +access+rwc"
+			;;
+		waves|-waves|--waves)
+			setenv TEST_OPTION "${TEST_OPTION} +ncaccess+rwc +define+Waves"
+			;;
+		-C)
+			WORKDIR=$2; shift;
+			;;
+		-F)
+			ERASEWD=y;
+			;;
+		*)
+			BINIMAGE=$CWD/$1
+			;;
+	esac
+	shift
+done
+test -f "$BINIMAGE" || die_usage "Binary image $BINIMAGE not found"
+test -d "$TOP_DESIGN" || die "Please set TOP_DESIGN variable to a valid directory path"
+
+mkdir "$WORKDIR" 2>/dev/null
+cd "$WORKDIR" || die "Unable to do 'cd $WORKDIR'"
+test "$ERASEWD" = "y" && rm -rf * 2>/dev/null
 
 msg "Building regression (log is in `pwd`/make.log)"
 (cd ${REGRESSION} && make clean && make AUTOMAKE=1 ASMTUBE=1) >make.log 2>&1 ||
@@ -121,7 +133,6 @@ cp ${TOP_DESIGN}/nmc3/sim/test/core_tests/${nmc3_test_path}_1.hex nmc_1.hex ||
 
 cp ${TOP_DESIGN}/system/cds_.lib . || die
 
-
 setenv BIN2HEX "${TOP_DESIGN}/system/soft/bin/tohex"
 setenv HEX2IM0 "${TOP_DESIGN}/system/soft/convert_hex_IM0.pl"
 
@@ -136,10 +147,6 @@ perl $HEX2IM0 image.hex test ||
 
 rm JTAGbsi 2>/dev/null
 touch JTAGbsi
-
-# Should we remove it from minibober?
-setenv I2C_SLAVE I2C_CLEAN
-setenv TEST_OPTION "${TEST_OPTION} +define+${I2C_SLAVE}"
 
 msg "Processing HDTVLIB's v_rtl files"
 do_ncvlog ${HDTVLIB}/ccl/veri_rtl/RAMDP128X32.v_rtl
