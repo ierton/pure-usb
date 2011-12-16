@@ -1,0 +1,31 @@
+DESCRIPTION
+===========
+This software is a test for SoC containing USB host controller Fujitsu USB 2.0
+IP-core and arm1176jzf-s CPU. No operation system is used to prevent possible
+influence on test results. Most of the code was borrowed from U-boot bootloader
+(commit 227b72515546fca535dbd3274f6d875d97f494fe).
+
+Currently, the application does the following:
+- Initializes EHCI subsystem
+- Performs FAKE initialization of OHCI subsystem (remember, this is only a test)
+- Scans for a device on port 0
+- Repeats all from the beginning
+
+COMPILE
+=======
+
+* Make local copy
+
+	$ git clone ~smironov/proj/pure-usb.git/
+	Cloning into pure-usb...
+	done.
+	$ cd pure-usb/
+
+* Set CROSS\_COMPILE var as in Linux kernel
+
+	$ export CROSS_COMPILE=arm-none-linux-gnueabi-
+
+* Run make
+	
+	$ make
+
